@@ -8,7 +8,7 @@ resources:
     - repository: manifests
       type: github
       name: clark-ewerton/argocd-example-apps
-      endpoint: clark-ewerton  # nome da conexão de service connection
+      endpoint: GitHub  # nome da conexão de service connection
 
 pool:
   vmImage: 'ubuntu-latest'
