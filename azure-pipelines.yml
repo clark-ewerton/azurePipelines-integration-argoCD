@@ -26,6 +26,7 @@ steps:
    # displayName: "Checkout do repositório da pipeline"
 
   - checkout: manifests
+    persistCredentials: true
   - script: |
       echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
 
