@@ -27,19 +27,27 @@ steps:
 
   - checkout: manifests
   - script: |
-      echo "Atualizando a imagem no manifest do guestbook..."
+      echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
 
-      cd $(Pipeline.Workspace)/s/argocd-example-apps
+      cd $(Pipeline.Workspace)/manifests
 
-      # Substitui a tag da imagem (exemplo: de v5 para v6)
+      echo "📂 Diretório atual: $(pwd)"
+      echo "🧾 Arquivos disponíveis:"
+      ls -R
+
+      # Garante que a branch master existe localmente
+      git fetch origin master
+      git checkout master
+
       sed -i 's|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:v6|' guestbook/guestbook-ui-deployment.yaml
+
+      echo "📦 Commitando mudança no repositório de manifests..."
 
       git config user.email "pipeline@azuredevops.com"
       git config user.name "Azure Pipelines"
 
-      git checkout master
       git add guestbook/guestbook-ui-deployment.yaml
-      git commit -m "Atualiza imagem do guestbook para v6"
+      git commit -m "Atualiza imagem do Guestbook para v6"
       git push origin master
     displayName: "Atualizar manifest do Guestbook"
 
