@@ -22,23 +22,24 @@ variables:
 
 steps:
   # Primeiro, estamos no repo da pipeline
-  - checkout: self
-    displayName: "Checkout do repositório da pipeline"
+  #- checkout: self
+   # displayName: "Checkout do repositório da pipeline"
 
-  # Agora, entramos no repo de manifests
   - checkout: manifests
-    displayName: "Checkout do repositório de manifests"
-    persistCredentials: true
-
   - script: |
-      echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
-      sed -i "s#image: ./guestbook:.#image: clark-ewerton/guestbook:${NEW_TAG}#" guestbook/guestbook-ui-deployment.yaml
+      echo "Atualizando a imagem no manifest do guestbook..."
 
-      echo "📦 Commitando mudança no repositório de manifests..."
-      git config user.email "ci@azure.com"
-      git config user.name "Azure Pipeline"
-      git commit -am "Atualiza imagem do guestbook para ${NEW_TAG}"
-      git push origin main
+      cd $(Pipeline.Workspace)/s/argocd-example-apps
+
+      # Substitui a tag da imagem (exemplo: de v5 para v6)
+      sed -i 's|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:v6|' guestbook/guestbook-ui-deployment.yaml
+
+      git config user.email "pipeline@azuredevops.com"
+      git config user.name "Azure Pipelines"
+
+      git add guestbook/guestbook-ui-deployment.yaml
+      git commit -m "Atualiza imagem do guestbook para v6"
+      git push origin master
     displayName: "Atualizar manifest do Guestbook"
 
   # Volta para o repo original (da pipeline)
