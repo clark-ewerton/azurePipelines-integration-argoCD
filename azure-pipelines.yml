@@ -11,7 +11,7 @@ resources:
       endpoint: GitHub
 
 variables:
-  ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
+  ARGOCD_SERVER: 'unsatisfactorily-peremptory-brendon.ngrok-free.dev'
   ARGOCD_USER: 'admin'
   ARGOCD_PASSWORD: 'R571Ah9iS8cj5ZMy'
   ARGOCD_APP: 'guestbook'
@@ -56,21 +56,20 @@ jobs:
   displayName: "Sync com ArgoCD via Windows"
   dependsOn: UpdateManifest
   pool:
-    name: clark  # seu agente Windows self-hosted
+    name: Clark  # seu agente Windows self-hosted
   steps:
-    - script: |
-        set -e
-        echo "⬇️ Instalando ArgoCD CLI..."
-        powershell -Command "Invoke-WebRequest -Uri https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe -OutFile argocd.exe"
+    - powershell: |
+            Write-Host "⬇️ Instalando ArgoCD CLI..."
+            Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
+      displayName: "Baixar ArgoCD CLI"
 
-    - script: |
-        set -e
-        echo "🔑 Logando no ArgoCD..."
-        .\argocd.exe login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
+    - powershell: |
+            Write-Host "🔑 Logando no ArgoCD..."
+            .\argocd.exe login https://$(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure --grpc-web
 
-        echo "🔁 Executando sync e aguardando aplicação ficar saudável..."
-        .\argocd.exe app sync $(ARGOCD_APP)
-        .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
+            Write-Host "🔁 Executando sync e aguardando aplicação ficar saudável..."
+            .\argocd.exe app sync $(ARGOCD_APP)
+            .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
 
-        echo "✅ Sync concluído com sucesso!"
+            Write-Host "✅ Sync concluído com sucesso!"
       displayName: "Sync ArgoCD no Windows"
