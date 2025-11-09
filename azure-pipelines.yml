@@ -28,7 +28,7 @@ jobs:
     - script: |
         set -e
         echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
-        cd $(Pipeline.Workspace)/s/argocd-example-apps
+        cd $(Pipeline.Workspace)/s/clark-ewerton/argocd-example-apps
 
         # Extrai tag atual
         CURRENT_TAG=$(grep "image: gcr.io/google-samples/gb-frontend:" guestbook/guestbook-ui-deployment.yaml | sed 's/.*://')
