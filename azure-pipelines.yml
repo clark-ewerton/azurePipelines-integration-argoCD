@@ -7,7 +7,7 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  ARGOCD_SERVER: 'https://SEU-ENDERECO.ngrok-free.dev'
+  ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
   ARGOCD_USER: 'admin'
   ARGOCD_PASSWORD: 'SUA_SENHA_AQUI'
   ARGOCD_APP: 'guestbook'
