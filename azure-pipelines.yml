@@ -16,15 +16,11 @@ pool:
 variables:
   ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
   ARGOCD_USER: 'admin'
-  ARGOCD_PASSWORD: 'SUA_SENHA_AQUI'
+  ARGOCD_PASSWORD: 'R571Ah9iS8cj5ZMy'
   ARGOCD_APP: 'guestbook'
   NEW_TAG: 'v2.0'
 
 steps:
-  # Primeiro, estamos no repo da pipeline
-  #- checkout: self
-   # displayName: "Checkout do repositório da pipeline"
-
   - checkout: manifests
     persistCredentials: true
   - script: |
@@ -63,12 +59,12 @@ steps:
       echo "✅ Manifest atualizado para $NEXT_TAG"
     displayName: "Atualizar manifest do Guestbook com tag incremental"
 
-
   # Volta para o repo original (da pipeline)
   - checkout: self
     displayName: "Retornar para o repositório da pipeline"
 
   - script: |
+      set -e   # Para falhar se qualquer comando der erro
       echo "⬇️ Instalando ArgoCD CLI..."
       curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
       chmod +x /usr/local/bin/argocd
