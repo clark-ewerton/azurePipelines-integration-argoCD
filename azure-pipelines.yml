@@ -44,8 +44,8 @@ steps:
 
       echo "📦 Commitando mudança no repositório de manifests..."
 
-      git config user.email "pipeline@azuredevops.com"
-      git config user.name "Azure Pipelines"
+      git config --global user.name "azure-pipelines[bot]"
+      git config --global user.email "azure-pipelines@dev.azure.com"
 
       git add guestbook/guestbook-ui-deployment.yaml
       git commit -m "Atualiza imagem do Guestbook para v6"
