@@ -11,6 +11,8 @@ resources:
       endpoint: GitHub  # nome da conexão de service connection
 
 pool:
+  name: clark
+  demands: agent.os -equals Linux
   vmImage: 'ubuntu-latest'
 
 variables:
