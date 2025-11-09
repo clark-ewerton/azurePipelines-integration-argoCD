@@ -56,18 +56,24 @@ jobs:
     name: Clark  # seu agente Windows self-hosted
   steps:
     - powershell: |
-        Write-Host "🔍 Verificando estado atual da aplicação no ArgoCD..."
+            Write-Host "⬇️ Instalando ArgoCD CLI..."
+            Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
+      displayName: "Baixar ArgoCD CLI"
 
-        $appName = "guestbook"
+    - powershell: |
+            Write-Host "🔑 Logando no ArgoCD..."
+            .\argocd.exe login https://$(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure --grpc-web
 
-        $status = & .\argocd.exe app get $appName --grpc-web --output json | ConvertFrom-Json | Select-Object -ExpandProperty status | Select-Object -ExpandProperty sync | Select-Object -ExpandProperty status
+            echo "🔍 Verificando status do aplicativo $(ARGOCD_APP)..."
+            STATUS=$(.\argocd.exe app get $(ARGOCD_APP) --grpc-web --output json | jq -r '.status.sync.status')
 
-        Write-Host "🔄 Status atual: $status"
-
-        if ($status -eq "OutOfSync") {
-            Write-Host "⚠️ Aplicação está OutOfSync. Iniciando sync..."
-            & .\argocd.exe app sync $appName --grpc-web --force
-        } else {
-            Write-Host "✅ Aplicação já está sincronizada. Nenhuma ação necessária."
-        }
-      displayName: "Sync condicional ArgoCD"
+            echo "Status atual: $STATUS"
+            if [ "$STATUS" = "OutOfSync" ]; then
+              echo "⚠️ Aplicação está OutOfSync. Iniciando sync..."
+              .\argocd.exe app sync $(ARGOCD_APP) --grpc-web --timeout 180
+              .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
+              echo "✅ Sync executado com sucesso!"
+            else
+              echo "✅ Aplicação já está sincronizada. Nenhuma ação necessária."
+            fi
+      displayName: "Sync ArgoCD apenas se estiver OutOfSync"
