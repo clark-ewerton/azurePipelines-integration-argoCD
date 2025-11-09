@@ -8,79 +8,64 @@ resources:
     - repository: manifests
       type: github
       name: clark-ewerton/argocd-example-apps
-      endpoint: GitHub  # nome da conexão de service connection
-
-pool:
-  name: clark
-  demands: agent.os -equals Windows_NT
+      endpoint: GitHub
 
 variables:
   ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
   ARGOCD_USER: 'admin'
   ARGOCD_PASSWORD: 'R571Ah9iS8cj5ZMy'
   ARGOCD_APP: 'guestbook'
-  NEW_TAG: 'v2.0'
 
-steps:
-  - checkout: manifests
-    persistCredentials: true
-  - script: |
-      set -e  # Faz a pipeline falhar se algum comando der erro
+jobs:
+- job: UpdateManifest
+  displayName: "Atualizar manifest do Guestbook"
+  pool:
+    vmImage: 'ubuntu-latest'  # agente Linux hospedado
+  steps:
+    - checkout: manifests
+      persistCredentials: true
 
-      echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
+    - script: |
+        set -e
+        echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
+        cd $(Pipeline.Workspace)/s/argocd-example-apps
 
-      cd $(Pipeline.Workspace)/s/argocd-example-apps
+        # Extrai tag atual
+        CURRENT_TAG=$(grep "image: gcr.io/google-samples/gb-frontend:" guestbook/guestbook-ui-deployment.yaml | sed 's/.*://')
+        CURRENT_NUMBER=${CURRENT_TAG#v}
+        NEXT_NUMBER=$((CURRENT_NUMBER + 1))
+        NEXT_TAG="v$NEXT_NUMBER"
 
-      # Garante que a branch master existe localmente
-      git fetch origin master
-      git checkout master
+        # Substitui tag
+        sed -i "s|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:$NEXT_TAG|" guestbook/guestbook-ui-deployment.yaml
 
-      # Extrai a tag atual do YAML
-      CURRENT_TAG=$(grep "image: gcr.io/google-samples/gb-frontend:" guestbook/guestbook-ui-deployment.yaml | sed 's/.*://')
-      echo "Tag atual: $CURRENT_TAG"
+        # Commit
+        git config --global user.name "azure-pipelines[bot]"
+        git config --global user.email "azure-pipelines@dev.azure.com"
+        git add guestbook/guestbook-ui-deployment.yaml
+        git commit -m "Atualiza imagem do Guestbook para $NEXT_TAG"
+        git push origin master
+      displayName: "Atualizar manifest com tag incremental"
 
-      # Incrementa a tag (v1, v2, v3...)
-      CURRENT_NUMBER=${CURRENT_TAG#v}         # remove o 'v' do começo
-      NEXT_NUMBER=$((CURRENT_NUMBER + 1))
-      NEXT_TAG="v$NEXT_NUMBER"
-      echo "Próxima tag: $NEXT_TAG"
+- job: ArgoCDSync
+  displayName: "Sync com ArgoCD via Windows"
+  dependsOn: UpdateManifest
+  pool:
+    name: Clark  # seu agente Windows self-hosted
+  steps:
+    - script: |
+        set -e
+        echo "⬇️ Instalando ArgoCD CLI..."
+        powershell -Command "Invoke-WebRequest -Uri https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe -OutFile argocd.exe"
 
-      # Substitui a tag no YAML
-      sed -i "s|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:$NEXT_TAG|" guestbook/guestbook-ui-deployment.yaml
+    - script: |
+        set -e
+        echo "🔑 Logando no ArgoCD..."
+        .\argocd.exe login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
 
-      echo "📦 Commitando mudança no repositório de manifests..."
+        echo "🔁 Executando sync e aguardando aplicação ficar saudável..."
+        .\argocd.exe app sync $(ARGOCD_APP)
+        .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
 
-      git config --global user.name "azure-pipelines[bot]"
-      git config --global user.email "azure-pipelines@dev.azure.com"
-
-      git add guestbook/guestbook-ui-deployment.yaml
-      git commit -m "Atualiza imagem do Guestbook para $NEXT_TAG"
-      git push origin master
-
-      echo "✅ Manifest atualizado para $NEXT_TAG"
-    displayName: "Atualizar manifest do Guestbook com tag incremental"
-
-  # Volta para o repo original (da pipeline)
-  - checkout: self
-    displayName: "Retornar para o repositório da pipeline"
-
-  - script: |
-      set -e   # Para falhar se qualquer comando der erro
-      echo "⬇️ Instalando ArgoCD CLI..."
-      curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-      chmod +x /usr/local/bin/argocd
-    displayName: "Instalar ArgoCD CLI"
-
-  # Agora sim, continua o fluxo normal (login, sync, validação)
-  - script: |
-      set -e   # Para falhar se qualquer comando der erro
-
-      echo "🔑 Logando no ArgoCD..."
-      argocd login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
-
-      echo "🔁 Executando sync e aguardando aplicação ficar saudável..."
-      argocd app sync $(ARGOCD_APP)
-      argocd app wait $(ARGOCD_APP) --health --timeout 180
-
-      echo "✅ Sync concluído com sucesso!"
-    displayName: "Sync com ArgoCD"
+        echo "✅ Sync concluído com sucesso!"
+      displayName: "Sync ArgoCD no Windows"
