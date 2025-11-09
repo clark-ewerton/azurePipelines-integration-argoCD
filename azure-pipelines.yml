@@ -29,7 +29,7 @@ steps:
   - script: |
       echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
 
-      cd $(Pipeline.Workspace)/manifests
+      cd $(Pipeline.Workspace)/argocd-example-apps
 
       echo "📂 Diretório atual: $(pwd)"
       echo "🧾 Arquivos disponíveis:"
