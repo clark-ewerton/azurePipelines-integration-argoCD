@@ -13,7 +13,6 @@ resources:
 pool:
   name: clark
   demands: agent.os -equals Linux
-  vmImage: 'ubuntu-latest'
 
 variables:
   ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
