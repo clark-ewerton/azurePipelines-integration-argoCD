@@ -31,15 +31,20 @@ jobs:
         #ls -R $(Pipeline.Workspace)/s
         cd $(Pipeline.Workspace)/s/
 
+        # Garante que a branch master existe localmente
+        git fetch origin master
+        git checkout master
+
         echo "🔄 Atualizando annotation para forçar sync: $TIMESTAMP"
         TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%S)
-        yq e -i ".metadata.annotations.force-sync = \"${TIMESTAMP}\"" k8s/guestbook-deployment.yaml
+        yq e -i ".metadata.annotations.force-sync = \"${TIMESTAMP}\"" guestbook/guestbook-ui-deployment.yaml
 
         # Commit
         git config --global user.name "azure-pipelines[bot]"
         git config --global user.email "azure-pipelines@dev.azure.com"
         git add guestbook/guestbook-ui-deployment.yaml
         git commit -m "Atualiza imagem do Guestbook para $NEXT_TAG"
+
         # Push
         git push origin master
       displayName: "Atualizar manifest com tag incremental"
