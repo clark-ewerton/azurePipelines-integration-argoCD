@@ -32,6 +32,8 @@ steps:
 
       echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
 
+      cd $(Pipeline.Workspace)/s/argocd-example-apps
+
       # Garante que a branch master existe localmente
       git fetch origin master
       git checkout master
