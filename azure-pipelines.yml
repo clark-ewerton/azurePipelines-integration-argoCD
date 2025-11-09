@@ -37,6 +37,7 @@ steps:
       git config user.email "pipeline@azuredevops.com"
       git config user.name "Azure Pipelines"
 
+      git checkout master
       git add guestbook/guestbook-ui-deployment.yaml
       git commit -m "Atualiza imagem do guestbook para v6"
       git push origin master
