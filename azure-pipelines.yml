@@ -28,19 +28,26 @@ steps:
   - checkout: manifests
     persistCredentials: true
   - script: |
+      set -e  # Faz a pipeline falhar se algum comando der erro
+
       echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
-
-      cd $(Pipeline.Workspace)/s/argocd-example-apps
-
-      echo "📂 Diretório atual: $(pwd)"
-      echo "🧾 Arquivos disponíveis:"
-      ls -R
 
       # Garante que a branch master existe localmente
       git fetch origin master
       git checkout master
 
-      sed -i 's|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:v6|' guestbook/guestbook-ui-deployment.yaml
+      # Extrai a tag atual do YAML
+      CURRENT_TAG=$(grep "image: gcr.io/google-samples/gb-frontend:" guestbook/guestbook-ui-deployment.yaml | sed 's/.*://')
+      echo "Tag atual: $CURRENT_TAG"
+
+      # Incrementa a tag (v1, v2, v3...)
+      CURRENT_NUMBER=${CURRENT_TAG#v}         # remove o 'v' do começo
+      NEXT_NUMBER=$((CURRENT_NUMBER + 1))
+      NEXT_TAG="v$NEXT_NUMBER"
+      echo "Próxima tag: $NEXT_TAG"
+
+      # Substitui a tag no YAML
+      sed -i "s|image: gcr.io/google-samples/gb-frontend:.*|image: gcr.io/google-samples/gb-frontend:$NEXT_TAG|" guestbook/guestbook-ui-deployment.yaml
 
       echo "📦 Commitando mudança no repositório de manifests..."
 
@@ -48,16 +55,27 @@ steps:
       git config --global user.email "azure-pipelines@dev.azure.com"
 
       git add guestbook/guestbook-ui-deployment.yaml
-      git commit -m "Atualiza imagem do Guestbook para v6"
+      git commit -m "Atualiza imagem do Guestbook para $NEXT_TAG"
       git push origin master
-    displayName: "Atualizar manifest do Guestbook"
+
+      echo "✅ Manifest atualizado para $NEXT_TAG"
+    displayName: "Atualizar manifest do Guestbook com tag incremental"
+
 
   # Volta para o repo original (da pipeline)
   - checkout: self
     displayName: "Retornar para o repositório da pipeline"
 
+  - script: |
+      echo "⬇️ Instalando ArgoCD CLI..."
+      curl -sSL -o /usr/local/bin/argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+      chmod +x /usr/local/bin/argocd
+    displayName: "Instalar ArgoCD CLI"
+
   # Agora sim, continua o fluxo normal (login, sync, validação)
   - script: |
+      set -e   # Para falhar se qualquer comando der erro
+
       echo "🔑 Logando no ArgoCD..."
       argocd login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
 
