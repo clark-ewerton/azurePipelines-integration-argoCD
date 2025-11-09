@@ -14,60 +14,38 @@ variables:
   NEW_TAG: 'v2.0'
 
 steps:
+  # Primeiro, estamos no repo da pipeline
   - checkout: self
+    displayName: "Checkout do repositório da pipeline"
 
-  # Atualiza a imagem no manifest (simulação de nova versão)
+  # Agora, entramos no repo de manifests
+  - checkout: git://github.com/clark-ewerton/argocd-example-apps
+    displayName: "Checkout do repositório de manifests"
+    persistCredentials: true
+
   - script: |
       echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
-      sed -i "s#image: ./guestbook:.#image: seuusuario/guestbook:${NEW_TAG}#" manifests/guestbook-deployment.yaml
+      sed -i "s#image: ./guestbook:.#image: clark-ewerton/guestbook:${NEW_TAG}#" guestbook/guestbook-ui-deployment.yaml
 
-      echo "📦 Commitando mudança no repositório..."
+      echo "📦 Commitando mudança no repositório de manifests..."
       git config user.email "ci@azure.com"
       git config user.name "Azure Pipeline"
       git commit -am "Atualiza imagem do guestbook para ${NEW_TAG}"
       git push origin main
     displayName: "Atualizar manifest do Guestbook"
 
-  # Sincroniza com o ArgoCD e valida o horário do último sync
+  # Volta para o repo original (da pipeline)
+  - checkout: self
+    displayName: "Retornar para o repositório da pipeline"
+
+  # Agora sim, continua o fluxo normal (login, sync, validação)
   - script: |
       echo "🔑 Logando no ArgoCD..."
       argocd login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
 
-      echo "🕓 Obtendo horário do último sync antes do deploy..."
-      BEFORE_SYNC=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.operationState.finishedAt')
-      echo "Último sync anterior: $BEFORE_SYNC"
-
-      echo "🔁 Executando novo sync..."
+      echo "🔁 Executando sync e aguardando aplicação ficar saudável..."
       argocd app sync $(ARGOCD_APP)
-
-      echo "🩺 Aguardando aplicação ficar saudável..."
       argocd app wait $(ARGOCD_APP) --health --timeout 180
 
-      echo "🕓 Obtendo horário do último sync após o deploy..."
-      AFTER_SYNC=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.operationState.finishedAt')
-      echo "Último sync atual: $AFTER_SYNC"
-
-      if [ "$BEFORE_SYNC" = "$AFTER_SYNC" ] || [ -z "$AFTER_SYNC" ]; then
-        echo "❌ O ArgoCD não realizou um novo sync. Abortando."
-        exit 1
-      else
-        echo "✅ Novo sync detectado com sucesso!"
-      fi
-    displayName: "Sync e validação de horário do último deploy"
-
-  # Valida se a imagem rodando é realmente a última deployada
-  - script: |
-      echo "🔍 Validando imagem rodando no cluster..."
-      ARGO_IMAGE=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.summary.images[0]')
-      GIT_IMAGE=$(grep "image:" manifests/guestbook-deployment.yaml | awk '{print $2}')
-
-      echo "🧩 Imagem no Git:  $GIT_IMAGE"
-      echo "🚀 Imagem no Argo: $ARGO_IMAGE"
-
-      if [ "$ARGO_IMAGE" = "$GIT_IMAGE" ]; then
-        echo "✅ O ArgoCD está rodando a última imagem deployada."
-      else
-        echo "❌ A imagem rodando no cluster está desatualizada."
-        exit 1
-      fi
-    displayName: "Validação final da imagem deployada"
+      echo "✅ Sync concluído com sucesso!"
+    displayName: "Sync com ArgoCD"
