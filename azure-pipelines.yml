@@ -51,7 +51,7 @@ jobs:
   displayName: "Sync com ArgoCD via Windows"
   dependsOn: UpdateManifest
   pool:
-    name: Clark  # seu agente Windows self-hosted
+    name: clark  # seu agente Windows self-hosted
   steps:
     - script: |
         set -e
