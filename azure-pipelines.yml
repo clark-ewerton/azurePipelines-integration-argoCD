@@ -12,7 +12,7 @@ resources:
 
 pool:
   name: clark
-  demands: agent.os -equals Windows
+  demands: agent.os -equals Windows_NT
 
 variables:
   ARGOCD_SERVER: 'https://unsatisfactorily-peremptory-brendon.ngrok-free.dev/'
