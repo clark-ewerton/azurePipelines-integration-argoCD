@@ -56,17 +56,18 @@ jobs:
     name: Clark  # seu agente Windows self-hosted
   steps:
     - powershell: |
-            Write-Host "⬇️ Instalando ArgoCD CLI..."
-            Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
-      displayName: "Baixar ArgoCD CLI"
+        Write-Host "🔍 Verificando estado atual da aplicação no ArgoCD..."
 
-    - powershell: |
-            Write-Host "🔑 Logando no ArgoCD..."
-            .\argocd.exe login https://$(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure --grpc-web
+        $appName = "guestbook"
 
-            Write-Host "🔁 Executando sync e aguardando aplicação ficar saudável..."
-            .\argocd.exe app sync $(ARGOCD_APP)
-            .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
+        $status = & .\argocd.exe app get $appName --grpc-web --output json | ConvertFrom-Json | Select-Object -ExpandProperty status | Select-Object -ExpandProperty sync | Select-Object -ExpandProperty status
 
-            Write-Host "✅ Sync concluído com sucesso!"
-      displayName: "Sync ArgoCD no Windows"
+        Write-Host "🔄 Status atual: $status"
+
+        if ($status -eq "OutOfSync") {
+            Write-Host "⚠️ Aplicação está OutOfSync. Iniciando sync..."
+            & .\argocd.exe app sync $appName --grpc-web --force
+        } else {
+            Write-Host "✅ Aplicação já está sincronizada. Nenhuma ação necessária."
+        }
+      displayName: "Sync condicional ArgoCD"
