@@ -1,0 +1,73 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  ARGOCD_SERVER: 'https://SEU-ENDERECO.ngrok-free.dev'
+  ARGOCD_USER: 'admin'
+  ARGOCD_PASSWORD: 'SUA_SENHA_AQUI'
+  ARGOCD_APP: 'guestbook'
+  NEW_TAG: 'v2.0'
+
+steps:
+  - checkout: self
+
+  # Atualiza a imagem no manifest (simulação de nova versão)
+  - script: |
+      echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
+      sed -i "s#image: ./guestbook:.#image: seuusuario/guestbook:${NEW_TAG}#" manifests/guestbook-deployment.yaml
+
+      echo "📦 Commitando mudança no repositório..."
+      git config user.email "ci@azure.com"
+      git config user.name "Azure Pipeline"
+      git commit -am "Atualiza imagem do guestbook para ${NEW_TAG}"
+      git push origin main
+    displayName: "Atualizar manifest do Guestbook"
+
+  # Sincroniza com o ArgoCD e valida o horário do último sync
+  - script: |
+      echo "🔑 Logando no ArgoCD..."
+      argocd login $(ARGOCD_SERVER) --username $(ARGOCD_USER) --password $(ARGOCD_PASSWORD) --insecure
+
+      echo "🕓 Obtendo horário do último sync antes do deploy..."
+      BEFORE_SYNC=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.operationState.finishedAt')
+      echo "Último sync anterior: $BEFORE_SYNC"
+
+      echo "🔁 Executando novo sync..."
+      argocd app sync $(ARGOCD_APP)
+
+      echo "🩺 Aguardando aplicação ficar saudável..."
+      argocd app wait $(ARGOCD_APP) --health --timeout 180
+
+      echo "🕓 Obtendo horário do último sync após o deploy..."
+      AFTER_SYNC=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.operationState.finishedAt')
+      echo "Último sync atual: $AFTER_SYNC"
+
+      if [ "$BEFORE_SYNC" = "$AFTER_SYNC" ] || [ -z "$AFTER_SYNC" ]; then
+        echo "❌ O ArgoCD não realizou um novo sync. Abortando."
+        exit 1
+      else
+        echo "✅ Novo sync detectado com sucesso!"
+      fi
+    displayName: "Sync e validação de horário do último deploy"
+
+  # Valida se a imagem rodando é realmente a última deployada
+  - script: |
+      echo "🔍 Validando imagem rodando no cluster..."
+      ARGO_IMAGE=$(argocd app get $(ARGOCD_APP) --output json | jq -r '.status.summary.images[0]')
+      GIT_IMAGE=$(grep "image:" manifests/guestbook-deployment.yaml | awk '{print $2}')
+
+      echo "🧩 Imagem no Git:  $GIT_IMAGE"
+      echo "🚀 Imagem no Argo: $ARGO_IMAGE"
+
+      if [ "$ARGO_IMAGE" = "$GIT_IMAGE" ]; then
+        echo "✅ O ArgoCD está rodando a última imagem deployada."
+      else
+        echo "❌ A imagem rodando no cluster está desatualizada."
+        exit 1
+      fi
+    displayName: "Validação final da imagem deployada"
