@@ -19,7 +19,7 @@ steps:
     displayName: "Checkout do repositório da pipeline"
 
   # Agora, entramos no repo de manifests
-  - checkout: git://clark-ewerton/clark-ewerton/argocd-example-apps
+  - checkout: git://GitHub/clark-ewerton/argocd-example-apps
     displayName: "Checkout do repositório de manifests"
     persistCredentials: true
 
