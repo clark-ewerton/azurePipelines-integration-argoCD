@@ -53,6 +53,11 @@ jobs:
     name: Clark  # seu agente Windows self-hosted
   steps:
     - powershell: |
+            Write-Host "⬇️ Connecting to Ubuntu..."
+            ubuntu2004
+      displayName: "Connecting to Ubuntu"
+
+    - powershell: |
             Write-Host "⬇️ Instalando ArgoCD CLI..."
             Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
       displayName: "Baixar ArgoCD CLI"
