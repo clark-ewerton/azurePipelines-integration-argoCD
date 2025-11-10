@@ -59,11 +59,7 @@ jobs:
 
     - powershell: |
         Write-Host "🔑 Logando no ArgoCD..."
-        .\argocd.exe login https://$(ARGOCD_SERVER)
-          --username $(ARGOCD_USERNAME)
-          --password $(ARGOCD_PASSWORD)
-          --insecure
-          --grpc-web
+        .\argocd.exe login https://$(ARGOCD_SERVER) --username $(ARGOCD_USERNAME) --password $(ARGOCD_PASSWORD) --insecure --grpc-web
 
         Write-Host "🔍 Verificando status do aplicativo $(ARGOCD_APP)..."
         $appInfo = .\argocd.exe app get $(ARGOCD_APP) --grpc-web --output json | ConvertFrom-Json
