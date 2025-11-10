@@ -15,68 +15,67 @@ variables:
 
 jobs:
 - job: UpdateManifest
-  displayName: "Atualizar manifest do Guestbook"
+  displayName: "Update Guestbook manifest"
   pool:
-    vmImage: 'ubuntu-latest'  # agente Linux hospedado
+    vmImage: 'ubuntu-latest'  # Hosted Linux agent
   steps:
     - checkout: manifests
       persistCredentials: true
 
     - script: |
         set -e
-        echo "🔧 Atualizando manifest do Guestbook com nova imagem..."
-        #ls -R $(Pipeline.Workspace)/s
+        echo "🔧 Updating Guestbook manifest with a new image..."
         cd $(Pipeline.Workspace)/s/
 
-        # Garante que a branch master existe localmente
+        # Ensure the master branch exists locally
         git fetch origin master
         git checkout master
 
-        echo "🔄 Atualizando annotation para forçar sync: $TIMESTAMP"
+        echo "🔄 Updating annotation to force sync: $TIMESTAMP"
         TIMESTAMP=$(date +%Y-%m-%dT%H:%M:%S)
         yq e -i ".metadata.annotations.force-sync = \"${TIMESTAMP}\"" guestbook/guestbook-ui-deployment.yaml
 
-        # Commit
+        # Commit changes
         git config --global user.name "azure-pipelines[bot]"
         git config --global user.email "azure-pipelines@dev.azure.com"
         git add guestbook/guestbook-ui-deployment.yaml
-        git commit -m "Atualiza imagem do Guestbook para $NEXT_TAG"
+        git commit -m "Update Guestbook manifest with tag $NEXT_TAG"
 
-        # Push
+        # Push to GitHub
         git push origin master
-      displayName: "Atualizar manifest com tag incremental"
+      displayName: "Update manifest with incremental tag"
 
 - job: ArgoCDSync
-  displayName: "Sync com ArgoCD via Windows"
+  displayName: "Sync with ArgoCD via Windows agent"
   dependsOn: UpdateManifest
   pool:
-    name: Clark  # seu agente Windows self-hosted
+    name: Clark  # your self-hosted Windows agent
   steps:
     - powershell: |
-            Write-Host "⬇️ Instalando ArgoCD CLI..."
-            Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
-      displayName: "Baixar ArgoCD CLI"
+        Write-Host "⬇️ Installing ArgoCD CLI..."
+        Invoke-WebRequest -Uri "https://github.com/argoproj/argo-cd/releases/latest/download/argocd-windows-amd64.exe" -OutFile "argocd.exe"
+      displayName: "Download ArgoCD CLI"
 
     - powershell: |
-        Write-Host "🔑 Logando no ArgoCD..."
+        Write-Host "🔑 Logging in to ArgoCD..."
         .\argocd.exe login https://$(ARGOCD_SERVER) --username $(ARGOCD_USERNAME) --password $(ARGOCD_PASSWORD) --insecure --grpc-web
 
-        Write-Host "🔄 Forçando refresh do app $(ARGOCD_APP)..."
+        Write-Host "🔄 Refreshing the app $(ARGOCD_APP)..."
         .\argocd.exe app get $(ARGOCD_APP) --refresh
-        
-        Write-Host "🔍 Verificando status do aplicativo $(ARGOCD_APP)..."
+
+        Write-Host "🔍 Checking app status for $(ARGOCD_APP)..."
         $appInfo = .\argocd.exe app get $(ARGOCD_APP) --grpc-web --output json | ConvertFrom-Json
         $status = $appInfo.status.sync.status
 
-        Write-Host "Status atual: $status"
+        Write-Host "Current sync status: $status"
 
         if ($status -eq "OutOfSync") {
-          Write-Host "⚠️ Aplicação está OutOfSync. Iniciando sync..."
+          Write-Host "⚠️ Application is OutOfSync. Starting sync..."
           .\argocd.exe app sync $(ARGOCD_APP) --grpc-web --timeout 180
           .\argocd.exe app wait $(ARGOCD_APP) --health --timeout 180
-          Write-Host "✅ Sync executado com sucesso!"
+          Write-Host "✅ Sync completed successfully!"
         }
         else {
-          Write-Host "✅ Aplicação já está sincronizada. Nenhuma ação necessária."
+          Write-Host "✅ Application is already in sync. No action needed."
         }
-      displayName: "Sync ArgoCD apenas se estiver OutOfSync"
+      displayName: "Sync ArgoCD only if OutOfSync"
