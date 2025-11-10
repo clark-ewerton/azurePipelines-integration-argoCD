@@ -54,7 +54,7 @@ jobs:
   steps:
     - powershell: |
             Write-Host "⬇️ Connecting to Ubuntu..."
-            ubuntu2004
+           # ubuntu2004
       displayName: "Connecting to Ubuntu"
 
     - powershell: |
