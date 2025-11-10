@@ -11,10 +11,7 @@ resources:
       endpoint: GitHub
 
 variables:
-  ARGOCD_SERVER: 'unsatisfactorily-peremptory-brendon.ngrok-free.dev'
-  ARGOCD_USER: 'admin'
-  ARGOCD_PASSWORD: 'R571Ah9iS8cj5ZMy'
-  ARGOCD_APP: 'guestbook'
+- group: argocd
 
 jobs:
 - job: UpdateManifest
