@@ -60,7 +60,7 @@ jobs:
     - powershell: |
         Write-Host "🔑 Logando no ArgoCD..."
         .\argocd.exe login https://$(ARGOCD_SERVER) `
-          --username $(ARGOCD_USER) `
+          --username $(ARGOCD_USERNAME) `
           --password $(ARGOCD_PASSWORD) `
           --insecure `
           --grpc-web
